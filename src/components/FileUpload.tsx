@@ -1,139 +1,146 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Upload, CheckCircle, AlertCircle, X, Loader2 } from 'lucide-react';
-import { getPresignedUrls, uploadFileToS3 } from '../utils/uploadService';
-import { isUploadError } from '../utils/errorUtils';
+import React, { useState, useRef, useCallback } from "react";
+import { Upload, CheckCircle, AlertCircle, X, Loader2 } from "lucide-react";
+import { getPresignedUrls, uploadFileToS3 } from "../utils/uploadService";
+import { isUploadError } from "../utils/errorUtils";
 
+// Allowed file types for upload
 const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/png',
-  'image/jpeg'
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/png",
+  "image/jpeg",
 ];
 
+// Maximum file size allowed (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_FILES = 50;
+// Maximum number of files allowed for upload
+const MAX_FILES = 100;
 
+// Interface for file status
 interface FileStatus {
   progress: number;
   error?: string;
   success?: boolean;
 }
 
+// Interface for file statuses
 interface FileStatuses {
   [filename: string]: FileStatus;
 }
 
 export function FileUpload() {
+  // State to store the selected files
   const [files, setFiles] = useState<File[]>([]);
+  // State to store the status of each file
   const [fileStatuses, setFileStatuses] = useState<FileStatuses>({});
+  // State to indicate if files are being uploaded
   const [isUploading, setIsUploading] = useState(false);
-  const [globalError, setGlobalError] = useState<string>('');
+  // State to store any global error message
+  const [globalError, setGlobalError] = useState<string>("");
+  // Reference to the file input element
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Function to validate a file
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Please upload a PDF, DOC, PNG, or JPEG file.';
+      return "Please upload a PDF, DOC, PNG, or JPEG file.";
     }
     if (file.size > MAX_FILE_SIZE) {
-      return 'File size must be less than 10MB.';
+      return "File size must be less than 10MB.";
     }
     return null;
   };
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    setGlobalError('');
-    
-    if (selectedFiles.length + files.length > MAX_FILES) {
-      setGlobalError(`You can only upload up to ${MAX_FILES} files at a time.`);
-      return;
-    }
+  // Handler for file input change event
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = Array.from(e.target.files || []);
+      setGlobalError("");
 
-    const newFiles: File[] = [];
-    const newFileStatuses: FileStatuses = { ...fileStatuses };
-
-    selectedFiles.forEach(file => {
-      const error = validateFile(file);
-      if (error) {
-        newFileStatuses[file.name] = { progress: 0, error };
-      } else {
-        newFiles.push(file);
-        newFileStatuses[file.name] = { progress: 0 };
+      // Check if the total number of files exceeds the maximum limit
+      if (selectedFiles.length + files.length > MAX_FILES) {
+        setGlobalError(
+          `You can only upload up to ${MAX_FILES} files at a time.`
+        );
+        return;
       }
-    });
 
-    setFiles(prev => [...prev, ...newFiles]);
-    setFileStatuses(newFileStatuses);
+      const newFiles: File[] = [];
+      const newFileStatuses: FileStatuses = { ...fileStatuses };
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [files.length, fileStatuses]);
+      // Validate each selected file
+      selectedFiles.forEach((file) => {
+        const error = validateFile(file);
+        if (error) {
+          newFileStatuses[file.name] = { progress: 0, error };
+        } else {
+          newFiles.push(file);
+          newFileStatuses[file.name] = { progress: 0 };
+        }
+      });
 
+      // Update the state with the new files and their statuses
+      setFiles((prev) => [...prev, ...newFiles]);
+      setFileStatuses(newFileStatuses);
+
+      // Reset the file input value
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [files.length, fileStatuses]
+  );
+
+  // Handler to remove a file from the list
   const removeFile = useCallback((filename: string) => {
-    setFiles(prev => prev.filter(f => f.name !== filename));
-    setFileStatuses(prev => {
+    setFiles((prev) => prev.filter((f) => f.name !== filename));
+    setFileStatuses((prev) => {
       const newStatuses = { ...prev };
       delete newStatuses[filename];
       return newStatuses;
     });
-    setGlobalError('');
+    setGlobalError("");
   }, []);
 
+  // Handler for form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length === 0 || isUploading) return;
-
-    setIsUploading(true);
-    setGlobalError('');
 
     try {
-      const presignedUrlsData = await getPresignedUrls(files);
-      
-      for (const file of files) {
-        const urlData = presignedUrlsData.find(data => data.filename === file.name);
-        if (!urlData) {
-          throw new Error(`No presigned URL found for ${file.name}`);
-        }
+      // Get presigned URLs for the files
+      const presignedUrls = await getPresignedUrls(files);
 
-        try {
-          await uploadFileToS3(
-            file,
-            urlData.url,
-            (progress) => {
-              setFileStatuses(prev => ({
-                ...prev,
-                [file.name]: { ...prev[file.name], progress }
-              }));
-            }
-          );
+      // Upload each file to S3
+      await Promise.all(
+        files.map((file, index) =>
+          uploadFileToS3(file, presignedUrls[index].url, (progress) => {
+            setFileStatuses((prev) => ({
+              ...prev,
+              [file.name]: { ...prev[file.name], progress },
+            }));
+          })
+        )
+      );
 
-          setFileStatuses(prev => ({
-            ...prev,
-            [file.name]: { progress: 100, success: true }
-          }));
-        } catch (error) {
-          const errorMessage = isUploadError(error) ? error.message : 'Failed to upload file';
-          setFileStatuses(prev => ({
-            ...prev,
-            [file.name]: { 
-              progress: 0, 
-              error: errorMessage
-            }
-          }));
-        }
-      }
+      // Update the status of each file to success
+      setFileStatuses((prev) => {
+        const newStatuses = { ...prev };
+        files.forEach((file) => {
+          newStatuses[file.name] = { ...newStatuses[file.name], success: true };
+        });
+        return newStatuses;
+      });
+
+      setGlobalError("");
     } catch (error) {
-      const errorMessage = isUploadError(error) ? error.message : 'Failed to upload files';
-      setGlobalError(errorMessage);
-    } finally {
-      setIsUploading(false);
+      setGlobalError("Failed to upload files. Please try again.");
     }
   };
 
-  const allFilesSuccessful = files.length > 0 && 
-    files.every(file => fileStatuses[file.name]?.success);
+  // Check if all files have been uploaded successfully
+  const allFilesSuccessful =
+    files.length > 0 && files.every((file) => fileStatuses[file.name]?.success);
 
   return (
     <div className="max-w-xl mx-auto p-6">
@@ -164,7 +171,10 @@ export function FileUpload() {
             {files.map((file) => {
               const status = fileStatuses[file.name];
               return (
-                <div key={file.name} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                <div
+                  key={file.name}
+                  className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                >
                   <div className="flex-1 mr-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-gray-600 truncate">
@@ -185,15 +195,19 @@ export function FileUpload() {
                         <div className="w-full h-1 bg-gray-200 rounded-full">
                           <div
                             className={`h-1 rounded-full transition-all duration-300 ${
-                              status.error ? 'bg-red-500' : 
-                              status.success ? 'bg-green-500' : 
-                              'bg-blue-500'
+                              status.error
+                                ? "bg-red-500"
+                                : status.success
+                                ? "bg-green-500"
+                                : "bg-blue-500"
                             }`}
                             style={{ width: `${status.progress}%` }}
                           />
                         </div>
                         {status.error && (
-                          <p className="text-xs text-red-500 mt-1">{status.error}</p>
+                          <p className="text-xs text-red-500 mt-1">
+                            {status.error}
+                          </p>
                         )}
                       </>
                     )}
@@ -222,15 +236,16 @@ export function FileUpload() {
           type="submit"
           disabled={files.length === 0 || isUploading}
           className={`w-full py-3 px-4 rounded-md text-white font-medium flex items-center justify-center gap-2
-            ${files.length === 0 || isUploading
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
+            ${
+              files.length === 0 || isUploading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
             } transition-colors`}
         >
           {isUploading && <Loader2 className="h-5 w-5 animate-spin" />}
-          {isUploading 
-            ? 'Uploading...' 
-            : `Upload ${files.length} ${files.length === 1 ? 'File' : 'Files'}`}
+          {isUploading
+            ? "Uploading..."
+            : `Upload ${files.length} ${files.length === 1 ? "File" : "Files"}`}
         </button>
       </form>
     </div>
