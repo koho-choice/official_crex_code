@@ -1,7 +1,9 @@
 // src/components/UploadPage.tsx
-import React from "react";
+import React, { useState } from "react";
 
 function UploadPage() {
+  const [mode, setMode] = useState("essay"); // State to track the selected mode
+
   const uploadFiles = async () => {
     // Get the file input element from the DOM
     const input = document.getElementById("fileInput") as HTMLInputElement;
@@ -28,7 +30,7 @@ function UploadPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ files: fileData }),
+          body: JSON.stringify({ files: fileData, mode }), // Include mode in the request
         }
       );
 
@@ -112,11 +114,27 @@ function UploadPage() {
         </div>
 
         <div className="mt-12 flex flex-col items-center">
+          <label
+            htmlFor="modeSelect"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Select Mode:
+          </label>
+          <select
+            id="modeSelect"
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+          >
+            <option value="essay">Essay</option>
+            <option value="assignment">Assignment</option>
+          </select>
+
           <input
             type="file"
             id="fileInput"
             multiple
-            className="block w-full text-sm text-gray-600"
+            className="block w-full text-sm text-gray-600 mt-4"
           />
           <button
             onClick={uploadFiles}
