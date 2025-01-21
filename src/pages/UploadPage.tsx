@@ -10,16 +10,29 @@ import {
 } from "lucide-react";
 
 function UploadPage() {
+  const host = "https://crex-grader-d07366ace8fa.herokuapp.com";
+  //const host = "http://127.0.0.1:5000";
+  // State to manage the current mode (essay or assignment)
+  // add prefix to manage prefix
+  const [userPrefix, setUserPrefix] = useState<string>("");
   const [mode, setMode] = useState("essay");
+  // State to manage the selected files
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // State to manage any error messages
   const [error, setError] = useState<string | null>(null);
+  // State to manage the processing status
   const [isProcessing, setIsProcessing] = useState(false);
+  // State to manage the current processing step
   const [processingStep, setProcessingStep] = useState<string>("");
+  // State to manage the download URL for feedback
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  // Reference to the file input element
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Function to validate the selected files based on the current mode
   const validateFiles = (files: File[]): boolean => {
     if (mode === "essay") {
+      // Check if any file has 'rubric' in its name for essay mode
       const hasRubric = files.some((file) =>
         file.name.toLowerCase().includes("rubric")
       );
@@ -35,6 +48,7 @@ function UploadPage() {
     return true;
   };
 
+  // Function to handle the file upload process
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) {
       setError("No files selected");
@@ -56,16 +70,17 @@ function UploadPage() {
 
     try {
       setProcessingStep("Preparing files for upload...");
-      const response = await fetch(
-        "https://crex-grader-d07366ace8fa.herokuapp.com/generate-presigned-urls",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ files: fileData, mode }),
-        }
-      );
+      const response = await fetch(`${host}/generate-presigned-urls`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          files: fileData,
+          mode,
+          user_prefix: userPrefix,
+        }),
+      });
 
       const data = await response.json();
       const urls = data.urls;
@@ -89,25 +104,54 @@ function UploadPage() {
       }
 
       setProcessingStep("Processing submissions...");
-      const gradeSubmissions = await fetch(
-        "https://crex-grader-d07366ace8fa.herokuapp.com/process-files",
-        {
+      const gradeSubmissions = await fetch(`${host}/process-files`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "All files uploaded successfully",
+          user_prefix: userPrefix,
+        }),
+      });
+
+      if (gradeSubmissions.ok) {
+        const { task_id } = await gradeSubmissions.json();
+        console.log("Task initiated, ID:", task_id);
+
+        // Polling for task status
+        let taskStatus = "PENDING";
+        while (taskStatus === "PENDING") {
+          const statusResponse = await fetch(`${host}/check-task/${task_id}`, {
+            method: "GET",
+          });
+
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            taskStatus = statusData.state;
+            console.log("Task status:", statusData.status);
+
+            if (taskStatus === "SUCCESS") {
+              console.log("All submissions graded!");
+              break;
+            }
+          } else {
+            console.error("Failed to check task status");
+            break;
+          }
+
+          // Wait for a few seconds before checking again
+          await new Promise((resolve) => setTimeout(resolve, 20000));
+        }
+
+        setProcessingStep("Generating feedback...");
+        const feedbackResponse = await fetch(`${host}/get-feedback-url`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ message: "All files uploaded successfully" }),
-        }
-      );
-
-      if (gradeSubmissions.ok) {
-        setProcessingStep("Generating feedback...");
-        const feedbackResponse = await fetch(
-          "https://crex-grader-d07366ace8fa.herokuapp.com/get-feedback-url",
-          {
-            method: "GET",
-          }
-        );
+          body: JSON.stringify({ user_prefix: userPrefix }),
+        });
 
         if (feedbackResponse.ok) {
           const feedbackData = await feedbackResponse.json();
@@ -127,10 +171,12 @@ function UploadPage() {
     }
   };
 
+  // Function to handle the file input button click
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
   };
 
+  // Function to handle file selection change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -145,6 +191,7 @@ function UploadPage() {
     }
   };
 
+  // Function to remove a selected file
   const removeFile = (index: number) => {
     const updatedFiles = selectedFiles.filter((_, i) => i !== index);
     if (validateFiles(updatedFiles)) {
@@ -152,6 +199,7 @@ function UploadPage() {
     }
   };
 
+  // Function to handle mode change (essay or assignment)
   const handleModeChange = (newMode: string) => {
     setMode(newMode);
     if (selectedFiles.length > 0) {
@@ -159,6 +207,7 @@ function UploadPage() {
     }
   };
 
+  // Function to format file size in a readable format
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -167,6 +216,7 @@ function UploadPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  // Function to handle the download of feedback
   const handleDownload = () => {
     if (downloadUrl) {
       window.open(downloadUrl, "_blank");
@@ -175,6 +225,7 @@ function UploadPage() {
     }
   };
 
+  // Function to close the download modal
   const closeDownloadModal = () => {
     setDownloadUrl(null);
     setSelectedFiles([]);
@@ -250,6 +301,21 @@ function UploadPage() {
 
             <div className="mt-12 max-w-xl mx-auto">
               <div className="bg-white p-8 rounded-2xl shadow-sm">
+                <div className="mb-6">
+                  <label
+                    htmlFor="userPrefix"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Please enter your name:
+                  </label>
+                  <input
+                    type="text"
+                    id="userPrefix"
+                    value={userPrefix}
+                    onChange={(e) => setUserPrefix(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
                 <div className="flex justify-center mb-8">
                   <div className="inline-flex rounded-lg bg-gray-100 p-1">
                     <button
