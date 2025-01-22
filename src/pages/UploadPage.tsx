@@ -48,6 +48,21 @@ function UploadPage() {
     return true;
   };
 
+  // Function to determine if the upload button should be disabled
+  const isUploadDisabled = (): boolean => {
+    if (selectedFiles.length === 0) {
+      return true;
+    }
+    if (mode === "essay") {
+      // Check if any file has 'rubric' in its name for essay mode
+      const hasRubric = selectedFiles.some((file) =>
+        file.name.toLowerCase().includes("rubric")
+      );
+      return !hasRubric;
+    }
+    return false;
+  };
+
   // Function to handle the file upload process
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) {
@@ -420,9 +435,9 @@ function UploadPage() {
 
                   <button
                     onClick={uploadFiles}
-                    disabled={selectedFiles.length === 0}
+                    disabled={isUploadDisabled()}
                     className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-colors ${
-                      selectedFiles.length === 0
+                      isUploadDisabled()
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-gray-900 text-white hover:bg-gray-800"
                     }`}
