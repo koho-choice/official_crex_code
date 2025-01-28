@@ -29,9 +29,12 @@ export function Login() {
     e.preventDefault();
     if (!isSigningIn) {
       setIsSigningIn(true);
-      doSignInWithGoogle().catch((err) => {
+      try {
+        await doSignInWithGoogle();
+      } catch (err) {
+        console.error("Google sign-in error:", err);
         setIsSigningIn(false);
-      });
+      }
     }
   };
 
