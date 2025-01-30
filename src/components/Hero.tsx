@@ -1,5 +1,5 @@
 import React from "react";
-import { GraduationCap, Clock, CheckCircle } from "lucide-react";
+import { GraduationCap, Clock, CheckCircle, ArrowRight } from "lucide-react";
 
 // Hero component to display the main feature section
 export function Hero() {
@@ -18,18 +18,25 @@ export function Hero() {
               specifically for K-12 teachers. Simply take a picture of your
               assignment and let Crex do the rest.
             </p>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col sm:flex-row gap-4">
               {/* Call-to-action button for sign-ups */}
-              <div className="inline-flex items-center rounded-md bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-                <a
-                  href="https://buy.stripe.com/eVa9Ch50m10BagE28c"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className="mr-2">🎉</span>
-                  First 10 sign-ups get 1 month for $5!
-                </a>
-              </div>
+              <a
+                href="https://buy.stripe.com/eVa9Ch50m10BagE28c"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-xs font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 whitespace-nowrap"
+              >
+                <span className="mr-1">🎉</span>
+                First 10 sign-ups get 1 month for $5!
+              </a>
+              {/* Demo button */}
+              <a
+                href="/login"
+                className="flex items-center justify-center rounded-md bg-gray-900 px-6 py-3 text-xs font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 transition-colors whitespace-nowrap"
+              >
+                Click here for a live demo
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </a>
             </div>
             <div className="mt-8 flex gap-6">
               {/* List of features with icons */}

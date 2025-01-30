@@ -38,7 +38,7 @@ export function Navbar() {
             Crex
           </Link>
           <div className="flex space-x-4">
-            <NavLink to="/demo">Demo</NavLink>
+            <NavLink to="/login">Live Demo</NavLink>
             <NavLink to="/how-it-works">How It Works</NavLink>
             <NavLink to="/about">About Us</NavLink>
             {userLoggedIn ? (
