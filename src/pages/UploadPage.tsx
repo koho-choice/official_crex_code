@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Upload,
   Loader2,
@@ -34,6 +34,28 @@ function UploadPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   // Reference to the file input element
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [loaderMessage, setLoaderMessage] = useState("Processing Your Files");
+  const loaderMessages = [
+    "Stop watching, go enjoy lunch...",
+    "We'll take it from here...",
+    "Now Allowing You to Rest...",
+    "Now Allowing You to Focus on Your Students...",
+    "Sharpening Pencils Virtually...",
+    "Organizing the Teacher's Lounge...",
+    "Preparing Your Next Break...",
+    "Getting You Organized...",
+  ];
+
+  useEffect(() => {
+    let messageIndex = 0;
+    const interval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % loaderMessages.length;
+      setLoaderMessage(loaderMessages[messageIndex]);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Function to validate the selected files based on the current mode
   const validateFiles = (files: File[]): boolean => {
@@ -266,7 +288,7 @@ function UploadPage() {
                   <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-l-transparent animate-spin" />
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">
-                  Processing Your Files
+                  {loaderMessage}
                 </h3>
                 <p className="mt-2 text-sm text-gray-600">{processingStep}</p>
                 <div className="mt-6 w-full bg-gray-100 rounded-full h-1.5">
