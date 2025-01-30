@@ -358,8 +358,9 @@ function UploadPage() {
                 {mode === "assignment" && (
                   <div className="mb-6 p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-700">
-                      Assignment mode requires the files to be pictures, either
-                      jpg or png.
+                      Assignment mode requires that questions and student
+                      submissions are on the same page. Please ensure the files
+                      meet this requirement.
                     </p>
                   </div>
                 )}
