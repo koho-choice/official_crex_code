@@ -8,13 +8,19 @@ import {
   CheckCircle,
   Download,
 } from "lucide-react";
+import { useAuth } from "../contexts/index.tsx";
 
 function UploadPage() {
+  const { currentUser } = useAuth();
+  const uid = currentUser.uid;
+  const timestamp = new Date().toISOString();
+  const userPrefix = `${uid}-${timestamp}`;
+
   const host = "https://crex-grader-d07366ace8fa.herokuapp.com";
   //const host = "http://127.0.0.1:5000";
   // State to manage the current mode (essay or assignment)
   // add prefix to manage prefix
-  const [userPrefix, setUserPrefix] = useState<string>("");
+
   const [mode, setMode] = useState("essay");
   // State to manage the selected files
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -316,21 +322,6 @@ function UploadPage() {
 
             <div className="mt-12 max-w-xl mx-auto">
               <div className="bg-white p-8 rounded-2xl shadow-sm">
-                <div className="mb-6">
-                  <label
-                    htmlFor="userPrefix"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Please enter your name:
-                  </label>
-                  <input
-                    type="text"
-                    id="userPrefix"
-                    value={userPrefix}
-                    onChange={(e) => setUserPrefix(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                </div>
                 <div className="flex justify-center mb-8">
                   <div className="inline-flex rounded-lg bg-gray-100 p-1">
                     <button
