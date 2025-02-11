@@ -208,6 +208,22 @@ function UploadPage() {
     } catch (error) {
       console.error("Error processing files:", error);
       setError("Failed to process files. Please try again.");
+
+      // Send error details to the backend
+      try {
+        await fetch(`${host}/log-error`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            error_message: error.message,
+            error_details: error.stack || "No stack trace available",
+          }),
+        });
+      } catch (logError) {
+        console.error("Failed to log error to the backend:", logError);
+      }
     } finally {
       setIsProcessing(false);
       setProcessingStep("");
